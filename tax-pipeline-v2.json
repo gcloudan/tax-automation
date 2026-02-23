@@ -3,37 +3,57 @@
   "nodes": [
     {
       "parameters": {
-        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
         "simple": false,
         "filters": {},
-        "options": { "downloadAttachments": true }
+        "options": {
+          "downloadAttachments": true
+        }
       },
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.3,
-      "position": [-500, 0],
-      "id": "gmail-trigger",
+      "position": [-700, 0],
+      "id": "1a2b3c4d-0001-0001-0001-000000000001",
       "name": "Gmail Trigger",
       "credentials": {
-        "gmailOAuth2": { "id": "CpLr1b6KbJP040PV", "name": "Gmail account" }
+        "gmailOAuth2": {
+          "id": "CpLr1b6KbJP040PV",
+          "name": "Gmail account"
+        }
       }
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false },
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
           "conditions": [
             {
-              "leftValue": "={{ $json.attachments ? $json.attachments.length : 0 }}",
+              "id": "condition-pdf-check",
+              "leftValue": "={{ ($json.attachments || []).length }}",
               "rightValue": 0,
-              "operator": { "type": "number", "operation": "gt" }
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
             }
-          ]
+          ],
+          "combinator": "and"
         }
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [-260, 0],
-      "id": "has-attachment",
+      "position": [-460, 0],
+      "id": "1a2b3c4d-0001-0001-0001-000000000002",
       "name": "Has PDF Attachment?"
     },
     {
@@ -55,41 +75,29 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [-20, -120],
-      "id": "pdf-extract",
+      "position": [-220, -160],
+      "id": "1a2b3c4d-0001-0001-0001-000000000003",
       "name": "Extract PDF Text"
     },
     {
       "parameters": {
-        "jsCode": "// Merge PDF extraction result back with original email data\nconst emailData = $('Gmail Trigger').first().json;\nconst pdfData = $input.first().json;\n\nreturn {\n  subject: emailData.subject,\n  emailBody: emailData.html || emailData.text || emailData.snippet || '',\n  pdfText: pdfData.text || '',\n  pdfAmounts: pdfData.amounts_aud || [],\n  vendorHint: pdfData.vendor_hint || '',\n  hasPdf: true\n};"
+        "jsCode": "const emailData = $('Gmail Trigger').first().json;\nconst pdfData = $input.first().json;\n\nreturn {\n  subject: emailData.subject || '',\n  emailBody: emailData.html || emailData.text || emailData.snippet || '',\n  pdfText: pdfData.text || '',\n  pdfAmounts: (pdfData.amounts_aud || []).join(', '),\n  vendorHint: pdfData.vendor_hint || '',\n  hasPdf: true\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [200, -120],
-      "id": "merge-pdf",
+      "position": [20, -160],
+      "id": "1a2b3c4d-0001-0001-0001-000000000004",
       "name": "Merge PDF + Email"
     },
     {
       "parameters": {
-        "jsCode": "// No PDF — just pass email body through\nconst emailData = $input.first().json;\nreturn {\n  subject: emailData.subject,\n  emailBody: emailData.html || emailData.text || emailData.snippet || '',\n  pdfText: '',\n  pdfAmounts: [],\n  vendorHint: '',\n  hasPdf: false\n};"
+        "jsCode": "const emailData = $input.first().json;\n\nreturn {\n  subject: emailData.subject || '',\n  emailBody: emailData.html || emailData.text || emailData.snippet || '',\n  pdfText: '',\n  pdfAmounts: '',\n  vendorHint: '',\n  hasPdf: false\n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-20, 120],
-      "id": "no-pdf-passthrough",
+      "position": [-220, 160],
+      "id": "1a2b3c4d-0001-0001-0001-000000000005",
       "name": "Email Only (No PDF)"
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "combineBy": "combineAll",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [420, 0],
-      "id": "merge-branches",
-      "name": "Merge Branches"
     },
     {
       "parameters": {
@@ -98,33 +106,326 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer {{ $env.OPENROUTER_API_KEY }}" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"arcee-ai/trinity-large-preview:free\",\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a Tax Data Entry Assistant for a Cloud Engineer. Your goal is to capture EVERYTHING that has even a 1% chance of being deductible.\\n\\nSCORING RULES:\\n- If vendor is (AliExpress, Amazon, Bunnings, Apple, JB Hi-Fi, Jaycar, DigitalOcean, AWS, or any SaaS): Base Probability = 70%.\\n- If dollar amount ($) is found in email body OR PDF text: Add 30% to probability.\\n- If only a 'Download Invoice' button is found: Base Probability = 50% (Mark as 'Pending PDF').\\n\\nCATEGORY RULES:\\n- Tech/Electronics/Cables/SaaS/Homelab -> D5 (Work Related)\\n- Tools/Hardware/Plumbing/Maintenance/Rental -> Item 21 (Rental Property)\\n\\nDEPRECIATION: If a single item costs over $300 AUD, set depreciation_required to true.\\n\\nRespond strictly in JSON:\\n{\\n  \\\"potential_deduction\\\": boolean,\\n  \\\"probability_score\\\": \\\"string (e.g. 80%)\\\",\\n  \\\"ato_code\\\": \\\"string\\\",\\n  \\\"vendor\\\": \\\"string\\\",\\n  \\\"total_amount_aud\\\": number (0 if not found),\\n  \\\"depreciation_required\\\": boolean,\\n  \\\"status\\\": \\\"Verified\\\" | \\\"Pending PDF Extraction\\\" | \\\"Requires Manual Check\\\",\\n  \\\"brief_reason\\\": \\\"Why you caught this\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify(\n        \"Subject: \" + $json.subject +\n        \"\\nEmail Body: \" + ($json.emailBody || '').substring(0, 3000) +\n        ($json.pdfText ? \"\\n\\nPDF INVOICE TEXT:\\n\" + $json.pdfText.substring(0, 4000) : '') +\n        ($json.pdfAmounts.length > 0 ? \"\\n\\nAUD Amounts found in PDF: \" + $json.pdfAmounts.join(', ') : '')\n      ) }}\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"arcee-ai/trinity-large-preview:free\",\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a Tax Data Entry Assistant for a Cloud Engineer. Capture EVERYTHING with over 10% chance of being deductible.\\n\\nSCORING RULES:\\n- Vendor is AliExpress, Amazon, Bunnings, Apple, JB Hi-Fi, Jaycar, DigitalOcean, AWS, or any SaaS: Base 70%\\n- Dollar amount found in email OR PDF: Add 30%\\n- Only Download Invoice button found: Base 50%, mark Pending PDF Extraction\\n\\nCATEGORY RULES:\\n- Tech / Electronics / Cables / SaaS / Homelab -> D5\\n- Tools / Hardware / Plumbing / Maintenance / Rental property costs -> Item 21\\n\\nDEPRECIATION: Single item over $300 AUD sets depreciation_required to true.\\n\\nRespond ONLY with valid JSON, no other text:\\n{\\n  \\\"potential_deduction\\\": true,\\n  \\\"probability_score\\\": \\\"80%\\\",\\n  \\\"ato_code\\\": \\\"D5\\\",\\n  \\\"vendor\\\": \\\"vendor name\\\",\\n  \\\"total_amount_aud\\\": 0,\\n  \\\"depreciation_required\\\": false,\\n  \\\"status\\\": \\\"Verified\\\",\\n  \\\"brief_reason\\\": \\\"one sentence\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify('Subject: ' + $json.subject + '\\nEmail Body: ' + ($json.emailBody || '').substring(0, 3000) + ($json.pdfText ? '\\n\\nPDF INVOICE TEXT:\\n' + $json.pdfText.substring(0, 4000) : '') + ($json.pdfAmounts ? '\\nAUD Amounts from PDF: ' + $json.pdfAmounts : '')) }}\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
-      "position": [640, 0],
-      "id": "ai-triage",
+      "position": [260, 0],
+      "id": "1a2b3c4d-0001-0001-0001-000000000006",
       "name": "AI Triage (OpenRouter)"
     },
     {
       "parameters": {
-        "jsCode": "const rawText = $input.first().json.choices[0].message.content;\nconst parsed = JSON.parse(rawText);\n\n// Inject financial year and original subject for Sheets logging\nconst emailData = $('Gmail Trigger').first().json;\nparsed.source_subject = emailData.subject || '';\nparsed.financial_year = 'FY2024-25';\nparsed.date_logged = new Date().toISOString().split('T')[0];\n\nreturn parsed;"
+        "jsCode": "const rawText = $input.first().json.choices[0].message.content;\nconst parsed = JSON.parse(rawText);\n\nconst emailData = $('Gmail Trigger').first().json;\nparsed.source_subject = emailData.subject || '';\nparsed.financial_year = 'FY2024-25';\nparsed.date_logged = new Date().toISOString().split('T')[0];\n\nreturn parsed;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [860, 0],
-      "id": "parse-ai-json",
+      "position": [500, 0],
+      "id": "1a2b3c4d-0001-0001-0001-000000000007",
       "name": "Parse AI JSON"
     },
     {
       "parameters": {
         "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
           "conditions": [
-            {\n              \"leftValue\": \"={{ $json.potential_deduction }}\",\n              \"rightValue\": true,\n              \"operator\": { \"type\": \"boolean\", \"operation\": \"equals\" }\n            }\n          ]\n        }\n      },\n      \"type\": \"n8n-nodes-base.if\",\n      \"typeVersion\": 2,\n      \"position\": [1080, 0],\n      \"id\": \"is-potential\",\n      \"name\": \"Is Potential Deduction?\"\n    },\n    {\n      \"parameters\": {\n        \"operation\": \"append\",\n        \"documentId\": { \"__rl\": true, \"value\": \"={{ $env.GOOGLE_SHEET_ID }}\", \"mode\": \"id\" },\n        \"sheetName\": { \"__rl\": true, \"value\": \"ATO Deductions 2025\", \"mode\": \"name\" },\n        \"columns\": {\n          \"mappingMode\": \"defineBelow\",\n          \"value\": {\n            \"Date Logged\": \"={{ $json.date_logged }}\",\n            \"Vendor\": \"={{ $json.vendor }}\",\n            \"Amount (AUD)\": \"={{ $json.total_amount_aud }}\",\n            \"ATO Code\": \"={{ $json.ato_code }}\",\n            \"Probability\": \"={{ $json.probability_score }}\",\n            \"Status\": \"={{ $json.status }}\",\n            \"AI Reason\": \"={{ $json.brief_reason }}\",\n            \"Source Email Subject\": \"={{ $json.source_subject }}\",\n            \"Depreciation Flag\": \"={{ $json.depreciation_required }}\",\n            \"Financial Year\": \"={{ $json.financial_year }}\"\n          }\n        },\n        \"options\": {}\n      },\n      \"type\": \"n8n-nodes-base.googleSheets\",\n      \"typeVersion\": 4.4,\n      \"position\": [1300, -120],\n      \"id\": \"sheets-append\",\n      \"name\": \"Log to Google Sheets\",\n      \"credentials\": {\n        \"googleSheetsOAuth2Api\": { \"id\": \"REPLACE_WITH_YOUR_SHEETS_CRED_ID\", \"name\": \"Google Sheets account\" }\n      }\n    },\n    {\n      \"parameters\": {\n        \"conditions\": {\n          \"conditions\": [\n            {\n              \"leftValue\": \"={{ $json.status }}\",\n              \"rightValue\": \"Requires Manual Check\",\n              \"operator\": { \"type\": \"string\", \"operation\": \"equals\" }\n            }\n          ]\n        }\n      },\n      \"type\": \"n8n-nodes-base.if\",\n      \"typeVersion\": 2,\n      \"position\": [1520, -120],\n      \"id\": \"needs-alert\",\n      \"name\": \"Needs Manual Alert?\"\n    },\n    {\n      \"parameters\": {\n        \"sendTo\": \"taxdtran@gmail.com\",\n        \"subject\": \"=⚠️ Manual Check: {{$json.vendor}} ({{$json.probability_score}})\",\n        \"message\": \"=<h2>⚠️ Manual Check Required</h2>\\n<ul>\\n  <li><b>Vendor:</b> {{$json.vendor}}</li>\\n  <li><b>Amount:</b> ${{$json.total_amount_aud}}</li>\\n  <li><b>ATO Code:</b> {{$json.ato_code}}</li>\\n  <li><b>Probability:</b> {{$json.probability_score}}</li>\\n  <li><b>Status:</b> <span style='color:#d32f2f;font-weight:bold;'>{{$json.status}}</span></li>\\n  <li><b>Depreciation Required:</b> {{$json.depreciation_required}}</li>\\n</ul>\\n<h3>AI Reason</h3><p>{{$json.brief_reason}}</p>\\n<hr><p><small>Logged to Google Sheets. Review the PDF manually.</small></p>\",\n        \"options\": {}\n      },\n      \"type\": \"n8n-nodes-base.gmail\",\n      \"typeVersion\": 2.2,\n      \"position\": [1740, -220],\n      \"id\": \"alert-email\",\n      \"name\": \"Send Manual Check Alert\",\n      \"credentials\": {\n        \"gmailOAuth2\": { \"id\": \"CpLr1b6KbJP040PV\", \"name\": \"Gmail account\" }\n      }\n    },\n    {\n      \"parameters\": {\n        \"operation\": \"markAsRead\",\n        \"messageId\": \"={{ $node['Gmail Trigger'].json.id }}\"\n      },\n      \"type\": \"n8n-nodes-base.gmail\",\n      \"typeVersion\": 2.2,\n      \"position\": [1960, 0],\n      \"id\": \"mark-read\",\n      \"name\": \"Mark as Read\",\n      \"credentials\": {\n        \"gmailOAuth2\": { \"id\": \"CpLr1b6KbJP040PV\", \"name\": \"Gmail account\" }\n      }\n    }\n  ],\n  \"connections\": {\n    \"Gmail Trigger\": { \"main\": [[{ \"node\": \"Has PDF Attachment?\", \"type\": \"main\", \"index\": 0 }]] },\n    \"Has PDF Attachment?\": {\n      \"main\": [\n        [{ \"node\": \"Extract PDF Text\", \"type\": \"main\", \"index\": 0 }],\n        [{ \"node\": \"Email Only (No PDF)\", \"type\": \"main\", \"index\": 0 }]\n      ]\n    },\n    \"Extract PDF Text\": { \"main\": [[{ \"node\": \"Merge PDF + Email\", \"type\": \"main\", \"index\": 0 }]] },\n    \"Merge PDF + Email\": { \"main\": [[{ \"node\": \"Merge Branches\", \"type\": \"main\", \"index\": 0 }]] },\n    \"Email Only (No PDF)\": { \"main\": [[{ \"node\": \"Merge Branches\", \"type\": \"main\", \"index\": 1 }]] },\n    \"Merge Branches\": { \"main\": [[{ \"node\": \"AI Triage (OpenRouter)\", \"type\": \"main\", \"index\": 0 }]] },\n    \"AI Triage (OpenRouter)\": { \"main\": [[{ \"node\": \"Parse AI JSON\", \"type\": \"main\", \"index\": 0 }]] },\n    \"Parse AI JSON\": { \"main\": [[{ \"node\": \"Is Potential Deduction?\", \"type\": \"main\", \"index\": 0 }]] },\n    \"Is Potential Deduction?\": {\n      \"main\": [\n        [{ \"node\": \"Log to Google Sheets\", \"type\": \"main\", \"index\": 0 }],\n        [{ \"node\": \"Mark as Read\", \"type\": \"main\", \"index\": 0 }]\n      ]\n    },\n    \"Log to Google Sheets\": { \"main\": [[{ \"node\": \"Needs Manual Alert?\", \"type\": \"main\", \"index\": 0 }]] },\n    \"Needs Manual Alert?\": {\n      \"main\": [\n        [{ \"node\": \"Send Manual Check Alert\", \"type\": \"main\", \"index\": 0 }],\n        [{ \"node\": \"Mark as Read\", \"type\": \"main\", \"index\": 0 }]\n      ]\n    },\n    \"Send Manual Check Alert\": { \"main\": [[{ \"node\": \"Mark as Read\", \"type\": \"main\", \"index\": 0 }]] }\n  },\n  \"pinData\": {},\n  \"meta\": { \"templateCredsSetupCompleted\": false }\n}
+            {
+              "id": "condition-potential",
+              "leftValue": "={{ $json.potential_deduction }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [740, 0],
+      "id": "1a2b3c4d-0001-0001-0001-000000000008",
+      "name": "Is Potential Deduction?"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "ATO Deductions 2025",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date Logged": "={{ $json.date_logged }}",
+            "Vendor": "={{ $json.vendor }}",
+            "Amount (AUD)": "={{ $json.total_amount_aud }}",
+            "ATO Code": "={{ $json.ato_code }}",
+            "Probability": "={{ $json.probability_score }}",
+            "Status": "={{ $json.status }}",
+            "AI Reason": "={{ $json.brief_reason }}",
+            "Source Email Subject": "={{ $json.source_subject }}",
+            "Depreciation Flag": "={{ $json.depreciation_required }}",
+            "Financial Year": "={{ $json.financial_year }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [980, -160],
+      "id": "1a2b3c4d-0001-0001-0001-000000000009",
+      "name": "Log to Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_SHEETS_CRED_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "condition-manual",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Requires Manual Check",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1220, -160],
+      "id": "1a2b3c4d-0001-0001-0001-000000000010",
+      "name": "Needs Manual Alert?"
+    },
+    {
+      "parameters": {
+        "sendTo": "taxdtran@gmail.com",
+        "subject": "=⚠️ Manual Check: {{$json.vendor}} ({{$json.probability_score}})",
+        "message": "=<h2>⚠️ Manual Check Required</h2>\n<ul>\n  <li><b>Vendor:</b> {{$json.vendor}}</li>\n  <li><b>Amount:</b> ${{$json.total_amount_aud}}</li>\n  <li><b>ATO Code:</b> {{$json.ato_code}}</li>\n  <li><b>Probability:</b> {{$json.probability_score}}</li>\n  <li><b>Status:</b> <span style=\"color:#d32f2f;font-weight:bold;\">{{$json.status}}</span></li>\n  <li><b>Depreciation Required:</b> {{$json.depreciation_required}}</li>\n  <li><b>Source:</b> {{$json.source_subject}}</li>\n</ul>\n<h3>AI Reason</h3>\n<p>{{$json.brief_reason}}</p>\n<hr>\n<p><small>Logged to Google Sheets. Review manually.</small></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [1460, -280],
+      "id": "1a2b3c4d-0001-0001-0001-000000000011",
+      "name": "Send Manual Check Alert",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CpLr1b6KbJP040PV",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Gmail Trigger').first().json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [1700, 0],
+      "id": "1a2b3c4d-0001-0001-0001-000000000012",
+      "name": "Mark as Read",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CpLr1b6KbJP040PV",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has PDF Attachment?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has PDF Attachment?": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Only (No PDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Merge PDF + Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge PDF + Email": {
+      "main": [
+        [
+          {
+            "node": "AI Triage (OpenRouter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Only (No PDF)": {
+      "main": [
+        [
+          {
+            "node": "AI Triage (OpenRouter)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Triage (OpenRouter)": {
+      "main": [
+        [
+          {
+            "node": "Parse AI JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI JSON": {
+      "main": [
+        [
+          {
+            "node": "Is Potential Deduction?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Potential Deduction?": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Needs Manual Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Manual Alert?": {
+      "main": [
+        [
+          {
+            "node": "Send Manual Check Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Manual Check Alert": {
+      "main": [
+        [
+          {
+            "node": "Mark as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Read": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "tax-automation-v2"
+  }
+}
