@@ -9,28 +9,21 @@ All services self-hosted on **OCI Oracle Always Free ARM VM** (Ampere A1, 4 OCPU
 
 ```mermaid
 flowchart LR
-    A["📄 PDF attachment\nor 📧 HTML email"] --> B
+    A["PDF or HTML email"] --> B & C
 
-    subgraph B["screenshotter :8002\nPuppeteer + Chromium"]
-        B1["render PDF or HTML\nheadlessly"]
-        B2["export PNG screenshot"]
-        B1 --> B2
+    subgraph B["screenshotter — Puppeteer :8002"]
+        B1["render headlessly"] --> B2["export PNG"]
     end
 
-    B --> C
-
-    subgraph C["pdf-service :8001\nPyMuPDF — M2 fallback"]
-        C1["text extraction\nfor machine-readable PDFs"]
+    subgraph C["pdf-service — PyMuPDF :8001"]
+        C1["text extraction fallback"]
     end
 
     B --> D
     C --> D
 
-    subgraph D["Vision AI\nGemini 1.5 Flash"]
-        D1["receives PNG + optional text"]
-        D2["reads like a human:\nlogo, table, bold total"]
-        D3["returns JSON:\nvendor / amount / ato_code / rationale"]
-        D1 --> D2 --> D3
+    subgraph D["Vision AI — Gemini 1.5 Flash"]
+        D1["read PNG like a human"] --> D2["vendor / amount / ato_code / rationale"]
     end
 
     style B fill:#f3e5f5,stroke:#8e24aa
