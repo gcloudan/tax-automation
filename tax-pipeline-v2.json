@@ -108,7 +108,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer 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"
+              "value": "Bearer sk-or-v1-test"
             },
             {
               "name": "Content-Type",
