@@ -37,21 +37,38 @@ Progress tracker for the ATO tax automation pipeline.
 
 ---
 
-## 🔮 Milestone 3 — Strict ATO Compliance + Depreciation Engine
+## 🔮 Milestone 3 — Vision Pipeline (Stop Fighting HTML)
 
-**Goal:** Replace "Triage Nurse" AI with "Expert Accountant" AI.
+**Goal:** Stop cat-and-mouse with HTML parsing. Render everything like a browser, screenshot it, let a vision model read it like a human would.
 
-- [ ] Swap to multimodal model (Gemini 1.5 Pro or Claude Sonnet via API)
-- [ ] Feed raw PDF binary directly to vision model (bypass text extraction for scanned PDFs)
+**Why:** HTML stripping breaks every time a vendor changes their template. Amounts embedded in images, rich tables, or scanned PDFs are invisible to text extraction. A vision model sees what a human sees — vendor logo, bold total, item name — regardless of the underlying format.
+
+**New container: `screenshotter` (Puppeteer)**
+- Receives raw email HTML or PDF
+- Renders it headlessly in Chromium
+- Returns a PNG screenshot
+- Completely format-agnostic
+
+**New AI: Gemini 1.5 Flash (free tier) or Claude Sonnet**
+- Receives the screenshot as an image
+- No HTML, no stripping, no regex — just "what is this receipt for and how much?"
+- Handles: rich HTML emails, image-only amounts, scanned PDFs, forwarded chains, handwritten receipts (photographed)
+
+**Tasks:**
+- [ ] Add `screenshotter` Puppeteer container to `docker-compose.yml` on port 8002
+- [ ] n8n: pipe email HTML → screenshotter → PNG
+- [ ] n8n: pipe PNG as base64 → Gemini 1.5 Flash vision API
 - [ ] Redesign system prompt: strict ATO 2024-25 ruleset
   - D5: IT equipment, software subs, homelab
   - Item 21: Rental property repairs/maintenance/insurance/rates
   - D4: Self-education if relevant
-- [ ] Depreciation flag: assets > $300 AUD → flag `depreciation_required: true`
-- [ ] Structured ATO rationale field: "Why this is deductible under TR 2023/1..."
-- [ ] Reject non-deductibles confidently (personal groceries, etc.)
-- [ ] Google Sheets: add Depreciation Flag column + ATO Rationale column
-- [ ] Notion DB as alternative/additional logging target
+- [ ] Depreciation flag: single item > $300 AUD → `depreciation_required: true`
+- [ ] Structured ATO rationale: "Deductible under TR 2023/1 because..."
+- [ ] Reject non-deductibles confidently (personal purchases, groceries, etc.)
+- [ ] Google Sheets: add ATO Rationale column
+- [ ] Retire the HTML-stripping code node entirely
+
+**Target:** Zero `$0` amounts. Zero format failures. Model-read receipts identical to human-read.
 
 ---
 
@@ -74,5 +91,5 @@ Progress tracker for the ATO tax automation pipeline.
 |-----------|-----------|
 | M1 ✅ | Receives email alerts for Biggins, AliExpress |
 | M2 | Google Sheet has rows with real $ amounts from PDFs |
-| M3 | Zero false positives sent to accountant |
+| M3 | Zero $0 amounts. eBay, AliExpress, all vendors extract correctly via vision |
 | M4 | EOFY report generated automatically |
