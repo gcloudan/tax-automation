@@ -11,20 +11,23 @@ All services self-hosted on **OCI Oracle Always Free ARM VM** (Ampere A1, 4 OCPU
 flowchart TD
     A["Incoming email"] --> B{What type?}
 
-    B -->|plain text only| C["text direct to AI"]
-    B -->|HTML or images| D["Puppeteer :8002\nrender → PNG"]
+    B -->|plain text only| C["raw text"]
+    B -->|HTML or images| D["Puppeteer :8002 — render to PNG"]
     B -->|PDF attached| E["PDF binary"]
     B -->|link to PDF| F{Public URL?}
 
-    F -->|yes| G["n8n HTTP GET\ndownload PDF"] --> E
+    F -->|yes| G["n8n HTTP GET — download PDF"] --> E
     F -->|auth required| H["⚠️ Requires Manual Download"]
 
-    C --> I["Gemini 1.5 Flash\nvendor / amount / ato_code / rationale"]
+    C --> I["nvidia/nemotron-nano-12b-v2-vl — image to text extraction only"]
     D --> I
     E --> I
 
+    I -->|"raw extracted text: vendor / date / line items / total"| J["Gemini 2.5 Flash — ATO tax judgment"]
+
     style D fill:#f3e5f5,stroke:#8e24aa
-    style I fill:#e8eaf6,stroke:#3949ab
+    style I fill:#e8f5e9,stroke:#43a047
+    style J fill:#e8eaf6,stroke:#3949ab
     style H fill:#ffebee,stroke:#e53935
 ```
 
